@@ -1,8 +1,7 @@
 package golinear
 
-/*
-#include "wrap.h"
-*/
+// #cgo LDFLAGS: -llinear
+//#include "wrap.h"
 import "C"
 
 // Parameters for training a linear model.
@@ -138,6 +137,10 @@ func NewL2RL1LossSvRegressionDualDefault(epsilon float64) SolverType {
 
 func DefaultParameters() Parameters {
 	return Parameters{NewL2RL2LossSvcDualDefault(), 1, nil}
+}
+
+func NewParameters(solverType SolverType, cost float64, relCosts []ClassWeight) Parameters {
+	return Parameters{solverType, C.double(cost), relCosts}
 }
 
 func toCParameter(param Parameters) *C.parameter_t {
