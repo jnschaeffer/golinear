@@ -15,12 +15,19 @@ void nodes_put(feature_node_t *nodes, size_t node_idx, int idx,
   double value);
 feature_node_t nodes_get(feature_node_t *nodes, size_t idx);
 
+feature_node_t **nodes_arr_new(size_t n, size_t *ms);
+void nodes_arr_free(feature_node_t **nodes_arr, size_t n);
+void nodes_arr_put(feature_node_t **nodes_arr, size_t arr_idx,
+	size_t node_idx, int idx, double value);
+
 feature_node_t *nodes_vector_get(problem_t *problem, size_t idx);
 
 problem_t *problem_new();
 void problem_free(problem_t *problem);
 void problem_add_train_inst(problem_t *problem, feature_node_t *nodes,
   double label);
+void problem_add_train_insts(problem_t *problem, feature_node_t **nodes_arr,
+	size_t len, double *labels);
 
 double problem_bias(problem_t *problem);
 void set_problem_bias(problem_t *problem, double bias);

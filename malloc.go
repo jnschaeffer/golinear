@@ -68,3 +68,10 @@ func newNodes(n C.size_t) *C.feature_node_t {
 	})
 	return (*C.feature_node_t)(nodes)
 }
+
+func newNodesArr(n C.size_t, ms []C.size_t) **C.feature_node_t {
+	nodesArr := tryNew(func() unsafe.Pointer {
+		return unsafe.Pointer(C.nodes_arr_new(n, &ms[0]))
+	})
+	return (**C.feature_node_t)(nodesArr)
+}

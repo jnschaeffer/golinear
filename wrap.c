@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <linear.h>
@@ -19,6 +20,27 @@ feature_node_t *nodes_new(size_t n)
   return nodes;
 }
 
+feature_node_t **nodes_arr_new(size_t n, size_t *ms)
+{
+	int i;
+	feature_node_t **nodes_arr = malloc(n * sizeof(feature_node_t *));
+	for(i = 0; i < n; i++) {
+		nodes_arr[i] = nodes_new(ms[i]);
+	}
+
+	return nodes_arr;
+}
+
+void nodes_arr_free(feature_node_t **nodes_arr, size_t n)
+{
+	int i;
+	for(i = 0; i < n; i++)
+	{
+		free(nodes_arr[i]);
+	}
+	free(nodes_arr);
+}
+
 void nodes_free(feature_node_t *nodes)
 {
   free(nodes);
@@ -29,6 +51,13 @@ void nodes_put(feature_node_t *nodes, size_t nodes_idx, int idx,
 {
   nodes[nodes_idx].index = idx;
   nodes[nodes_idx].value = value;
+}
+
+void nodes_arr_put(feature_node_t **nodes_arr, size_t arr_idx, size_t nodes_idx,
+	int idx, double value)
+{
+	nodes_arr[arr_idx][nodes_idx].index = idx;
+	nodes_arr[arr_idx][nodes_idx].value = value;
 }
 
 feature_node_t nodes_get(feature_node_t *nodes, size_t idx)
@@ -71,6 +100,35 @@ void problem_free(problem_t *problem)
   free(problem->x);
   free(problem->y);
   free(problem);
+}
+
+void problem_add_train_insts(problem_t *problem, feature_node_t **nodes_arr,
+	size_t len, double *labels)
+{
+	problem->l += len;
+
+	int i;
+	feature_node_t *node;
+	feature_node_t *nodes;
+	for (i = 0; i < len; i++)
+	{
+		nodes = nodes_arr[i];
+		for (node = nodes; node->index != -1; ++node)
+		{
+			if (node->index > problem->n)
+				problem->n = node->index;
+		}
+	}
+
+	problem->y = realloc(problem->y, problem->l * sizeof(double));
+	problem->x = realloc(problem->x, problem->l * sizeof(feature_node_t *));
+	int idx;
+	for (i = len; i > 0; --i)
+	{
+		idx = problem->l - i;
+		problem->y[idx] = labels[len-i];
+		problem->x[idx] = nodes_arr[len-i];
+	}
 }
 
 void problem_add_train_inst(problem_t *problem, feature_node_t *nodes,

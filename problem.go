@@ -86,11 +86,71 @@ func cNodes(nodes []FeatureValue) *C.feature_node_t {
 }
 
 func (problem *Problem) Add(trainInst TrainingInstance) error {
+	return problem.addHelper(trainInst, false)
+}
+
+func (problem *Problem) AddSorted(trainInst TrainingInstance) error {
+	return problem.addHelper(trainInst, true)
+}
+
+func (problem *Problem) AddManySorted(trainInsts []TrainingInstance) error {
+	for _, trainInst := range trainInsts {
+		if err := verifyFeatureIndices(trainInst.Features); err != nil {
+			return err
+		}
+	}
+
+	//nodesArr := make([][]C.feature_node_t, len(trainInsts))
+	nodesArr := make([]*C.feature_node_t, len(trainInsts))
+	for i, nodes := range trainInsts {
+		//nodesArr[i] = make([]C.feature_node_t, len(nodes.Features) + 1)
+		//nodesArr[i][len(nodesArr[i])-1].index = -1
+		//nodesArr[i][len(nodesArr[i])-1].value = 0.0
+		nodesArr[i] = newNodes(C.size_t(len(nodes.Features)))
+		//fmt.Printf("%v ", nodesArr[i][len(nodesArr[i])-1])
+	}
+	fmt.Println()
+
+	for _, nodes := range nodesArr {
+		problem.insts = append(problem.insts, nodes)
+	}
+
+	for i, inst := range trainInsts {
+		nodes := nodesArr[i]
+		for idx, val := range inst.Features {
+			//nodes[idx].index = C.int(val.Index)
+			//nodes[idx].value = C.double(val.Value)
+			C.nodes_put(nodes, C.size_t(idx), C.int(val.Index), C.double(val.Value))
+		}
+	}
+
+	labels := make([]C.double, len(trainInsts))
+	for i, inst := range trainInsts {
+		labels[i] = C.double(inst.Label)
+	}
+	/*
+	nodePtrs := make([]*C.feature_node_t, len(trainInsts))
+	for i, val := range nodesArr {
+		nodePtrs[i] = &val[0]
+	}
+	*/
+
+	C.problem_add_train_insts(problem.problem, &nodesArr[0], C.size_t(len(nodesArr)), &labels[0])
+
+	return nil
+}
+
+func (problem *Problem) addHelper(trainInst TrainingInstance, sorted bool) error {
 	if err := verifyFeatureIndices(trainInst.Features); err != nil {
 		return err
 	}
 
-	features := sortedFeatureVector(trainInst.Features)
+	var features FeatureVector
+	if !sorted {
+		features = SortedFeatureVector(trainInst.Features)
+	} else {
+		features = trainInst.Features
+	}
 
 	nodes := newNodes(C.size_t(len(features)))
 	problem.insts = append(problem.insts, nodes)
@@ -137,7 +197,7 @@ func (problem *Problem) Iterate(fun ProblemIterFunc) {
 
 // Helper functions
 
-func sortedFeatureVector(fv FeatureVector) FeatureVector {
+func SortedFeatureVector(fv FeatureVector) FeatureVector {
 	sorted := make(FeatureVector, len(fv))
 	copy(sorted, fv)
 
