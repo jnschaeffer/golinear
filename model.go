@@ -35,6 +35,17 @@ func (model *Model) Weights() []float64 {
 	return weights
 }
 
+// Extracts the labels of a problem.
+func (model *Model) Labels() []float64 {
+	n := model.model.nr_class
+	labels := make([]float64, n)
+	for i := range labels {
+		labels[i] = float64(C.get_int_idx(model.model.label, C.int(i)))
+	}
+
+	return labels
+}
+
 // Extracts the bias of a two-class problem.
 func (model *Model) Bias() float64 {
 	if model.model.nr_class != 2 {
