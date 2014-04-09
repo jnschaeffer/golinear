@@ -20,6 +20,7 @@ type Model struct {
 	model *C.model_t
 	// Keep a pointer to the problem, since C model depends on it.
 	problem *Problem
+	labelSlice  []int
 }
 
 // Extracts the weight vector of a two-class problem.
@@ -36,14 +37,12 @@ func (model *Model) Weights() []float64 {
 }
 
 // Extracts the labels of a problem.
-func (model *Model) Labels() []float64 {
-	n := model.model.nr_class
-	labels := make([]float64, n)
-	for i := range labels {
-		labels[i] = float64(C.get_int_idx(model.model.label, C.int(i)))
+func (model *Model) Labels() []int {
+	if model.labelSlice == nil {
+		model.labelSlice = model.labels()
 	}
 
-	return labels
+	return model.labelSlice
 }
 
 // Extracts the bias of a two-class problem.
@@ -80,7 +79,7 @@ func TrainModel(param Parameters, problem *Problem) (*Model, error) {
 	}
 
 	cmodel := C.train_wrap(problem.problem, cParam)
-	model := &Model{cmodel, problem}
+	model := &Model{cmodel, problem, nil}
 	runtime.SetFinalizer(model, finalizeModel)
 	return model, nil
 }
@@ -90,7 +89,7 @@ func LoadModel(filename string) (*Model, error) {
 	cFilename := C.CString(filename)
 	defer C.free(unsafe.Pointer(cFilename))
 
-	model := &Model{C.load_model_wrap(cFilename), nil}
+	model := &Model{C.load_model_wrap(cFilename), nil, nil}
 
 	if model.model == nil {
 		return nil, errors.New("Cannot read model: " + filename)
