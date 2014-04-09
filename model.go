@@ -19,21 +19,25 @@ import (
 type Model struct {
 	model *C.model_t
 	// Keep a pointer to the problem, since C model depends on it.
-	problem *Problem
+	problem     *Problem
 	labelSlice  []int
+	weightSlice []float64
 }
 
 // Extracts the weight vector of a two-class problem.
 func (model *Model) Weights() []float64 {
-	if model.model.nr_class != 2 {
-		panic(fmt.Sprint("not exactly two classes: ", model.model.nr_class))
+	if model.weightSlice == nil {
+		if model.model.nr_class != 2 {
+			panic(fmt.Sprint("not exactly two classes: ", model.model.nr_class))
+		}
+		n := model.model.nr_feature
+		weights := make([]float64, n)
+		for i := range weights {
+			weights[i] = float64(C.get_double_idx(model.model.w, C.int(i)))
+		}
+		model.weightSlice = weights
 	}
-	n := model.model.nr_feature
-	weights := make([]float64, n)
-	for i := range weights {
-		weights[i] = float64(C.get_double_idx(model.model.w, C.int(i)))
-	}
-	return weights
+	return model.weightSlice
 }
 
 // Extracts the labels of a problem.
@@ -79,7 +83,7 @@ func TrainModel(param Parameters, problem *Problem) (*Model, error) {
 	}
 
 	cmodel := C.train_wrap(problem.problem, cParam)
-	model := &Model{cmodel, problem, nil}
+	model := &Model{cmodel, problem, nil, nil}
 	runtime.SetFinalizer(model, finalizeModel)
 	return model, nil
 }
@@ -89,7 +93,7 @@ func LoadModel(filename string) (*Model, error) {
 	cFilename := C.CString(filename)
 	defer C.free(unsafe.Pointer(cFilename))
 
-	model := &Model{C.load_model_wrap(cFilename), nil, nil}
+	model := &Model{C.load_model_wrap(cFilename), nil, nil, nil}
 
 	if model.model == nil {
 		return nil, errors.New("Cannot read model: " + filename)
