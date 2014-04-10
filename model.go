@@ -38,6 +38,7 @@ func (model *Model) Norm() float64 {
 		model.norm = math.Sqrt(squareSum)
 	}
 
+	fmt.Printf("norm: %.5f\n", model.norm)
 	return model.norm
 }
 
