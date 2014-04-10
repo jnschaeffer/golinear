@@ -10,6 +10,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"math"
 	"runtime"
 	"unsafe"
 )
@@ -22,6 +23,22 @@ type Model struct {
 	problem     *Problem
 	labelSlice  []int
 	weightSlice []float64
+	norm        float64
+}
+
+// Norm() computes the norm of the SVM. Returns 0 if model is not trained.
+func (model *Model) Norm() float64 {
+	if model.model.nr_feature == 0 {
+		return 0.0
+	} else if model.norm == 0.0 {
+		var squareSum float64 = 0.0
+		for _, w := range model.Weights() {
+			squareSum += w * w
+		}
+		model.norm = math.Sqrt(squareSum)
+	}
+
+	return model.norm
 }
 
 // Extracts the weight vector of a two-class problem.
@@ -83,7 +100,7 @@ func TrainModel(param Parameters, problem *Problem) (*Model, error) {
 	}
 
 	cmodel := C.train_wrap(problem.problem, cParam)
-	model := &Model{cmodel, problem, nil, nil}
+	model := &Model{cmodel, problem, nil, nil, 0.0}
 	runtime.SetFinalizer(model, finalizeModel)
 	return model, nil
 }
@@ -93,7 +110,7 @@ func LoadModel(filename string) (*Model, error) {
 	cFilename := C.CString(filename)
 	defer C.free(unsafe.Pointer(cFilename))
 
-	model := &Model{C.load_model_wrap(cFilename), nil, nil, nil}
+	model := &Model{C.load_model_wrap(cFilename), nil, nil, nil, 0.0}
 
 	if model.model == nil {
 		return nil, errors.New("Cannot read model: " + filename)
